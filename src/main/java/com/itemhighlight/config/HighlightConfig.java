@@ -8,18 +8,6 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * Config file: .minecraft/config/itemhighlight.json
- *
- * Example content:
- * {
- *   "entries": [
- *     { "item": "minecraft:enchanted_golden_apple", "scale": 2.5 },
- *     { "item": "minecraft:nether_star",            "scale": 3.0 },
- *     { "item": "minecraft:diamond",                "scale": 1.8 }
- *   ]
- * }
- */
 public class HighlightConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -28,11 +16,8 @@ public class HighlightConfig {
 
     private List<HighlightEntry> entries = new ArrayList<>();
 
-    // ── inner record ──────────────────────────────────────────────────────────
     public static class HighlightEntry {
-        /** Full item ID, e.g. "minecraft:enchanted_golden_apple" */
         public String item;
-        /** Scale multiplier – 1.0 = normal, 2.0 = double size */
         public float scale;
 
         public HighlightEntry() {}
@@ -42,18 +27,12 @@ public class HighlightConfig {
         }
     }
 
-    // ── public API ────────────────────────────────────────────────────────────
+    public List<HighlightEntry> getEntries() { return entries; }
 
-    public List<HighlightEntry> getEntries() {
-        return entries;
-    }
-
-    /**
-     * Returns the scale for the given item ID, or 1.0f if not configured.
-     */
     public float getScale(String itemId) {
+        if (entries == null) return 1.0f;
         for (HighlightEntry e : entries) {
-            if (e.item != null && e.item.equals(itemId)) {
+            if (e != null && e.item != null && e.item.equals(itemId)) {
                 return Math.max(0.1f, e.scale);
             }
         }
@@ -61,24 +40,22 @@ public class HighlightConfig {
     }
 
     public boolean isHighlighted(String itemId) {
+        if (entries == null) return false;
         for (HighlightEntry e : entries) {
-            if (e.item != null && e.item.equals(itemId)) return true;
+            if (e != null && e.item != null && e.item.equals(itemId)) return true;
         }
         return false;
     }
-
-    // ── load / save ───────────────────────────────────────────────────────────
 
     public static HighlightConfig load() {
         if (Files.exists(CONFIG_PATH)) {
             try (Reader r = Files.newBufferedReader(CONFIG_PATH)) {
                 HighlightConfig cfg = GSON.fromJson(r, HighlightConfig.class);
                 if (cfg != null && cfg.entries != null) return cfg;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.err.println("[ItemHighlight] Failed to read config: " + e.getMessage());
             }
         }
-        // create default config
         HighlightConfig def = new HighlightConfig();
         def.entries.add(new HighlightEntry("minecraft:enchanted_golden_apple", 2.5f));
         def.entries.add(new HighlightEntry("minecraft:nether_star",            3.0f));
@@ -95,7 +72,7 @@ public class HighlightConfig {
             try (Writer w = Files.newBufferedWriter(CONFIG_PATH)) {
                 GSON.toJson(this, w);
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("[ItemHighlight] Failed to save config: " + e.getMessage());
         }
     }

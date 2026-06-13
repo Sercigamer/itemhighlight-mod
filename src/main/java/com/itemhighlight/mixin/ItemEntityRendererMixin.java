@@ -1,13 +1,13 @@
 package com.itemhighlight.mixin;
 
 import com.itemhighlight.ItemHighlightMod;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.ItemEntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registries;
+import net.minecraft.client.renderer.entity.ItemEntityRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,53 +16,50 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemEntityRenderer.class)
 public class ItemEntityRendererMixin {
 
-    /**
-     * Inject right before the item is rendered on the ground.
-     * We push a scaled matrix so the item appears larger for configured items.
-     */
     @Inject(
-        method = "render(Lnet/minecraft/entity/ItemEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
+        method = "render(Lnet/minecraft/world/entity/item/ItemEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At("HEAD")
     )
     private void onRenderHead(ItemEntity entity, float yaw, float tickDelta,
-                               MatrixStack matrices, VertexConsumerProvider vertexConsumers,
+                               PoseStack poseStack, MultiBufferSource bufferSource,
                                int light, CallbackInfo ci) {
+        try {
+            ItemStack stack = entity.getItem();
+            if (stack.isEmpty()) return;
 
-        ItemStack stack = entity.getStack();
-        if (stack.isEmpty()) return;
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (id == null) return;
 
-        // Get the item's registry ID (e.g. "minecraft:enchanted_golden_apple")
-        Identifier id = Registries.ITEM.getId(stack.getItem());
-        if (id == null) return;
-
-        float scale = ItemHighlightMod.CONFIG.getScale(id.toString());
-        if (scale != 1.0f) {
-            // Push matrix and scale uniformly around the item's center
-            matrices.push();
-            matrices.scale(scale, scale, scale);
+            float scale = ItemHighlightMod.CONFIG.getScale(id.toString());
+            if (scale != 1.0f) {
+                poseStack.pushPose();
+                poseStack.scale(scale, scale, scale);
+            }
+        } catch (Exception e) {
+            // Safety catch - never crash the game
         }
     }
 
-    /**
-     * After the render call finishes, pop the matrix if we pushed one.
-     */
     @Inject(
-        method = "render(Lnet/minecraft/entity/ItemEntity;FFLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
+        method = "render(Lnet/minecraft/world/entity/item/ItemEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At("TAIL")
     )
     private void onRenderTail(ItemEntity entity, float yaw, float tickDelta,
-                               MatrixStack matrices, VertexConsumerProvider vertexConsumers,
+                               PoseStack poseStack, MultiBufferSource bufferSource,
                                int light, CallbackInfo ci) {
+        try {
+            ItemStack stack = entity.getItem();
+            if (stack.isEmpty()) return;
 
-        ItemStack stack = entity.getStack();
-        if (stack.isEmpty()) return;
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (id == null) return;
 
-        Identifier id = Registries.ITEM.getId(stack.getItem());
-        if (id == null) return;
-
-        float scale = ItemHighlightMod.CONFIG.getScale(id.toString());
-        if (scale != 1.0f) {
-            matrices.pop();
+            float scale = ItemHighlightMod.CONFIG.getScale(id.toString());
+            if (scale != 1.0f) {
+                poseStack.popPose();
+            }
+        } catch (Exception e) {
+            // Safety catch - never crash the game
         }
     }
 }

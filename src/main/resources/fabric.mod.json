@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "Item Highlight",
   "description": "Highlights configurable items on the ground by scaling them up for easier spotting.",
-  "authors": ["You"],
+  "authors": ["Sercigamer"],
   "contact": {},
   "license": "MIT",
   "environment": "client",
@@ -17,9 +17,12 @@
     "itemhighlight.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.15.0",
-    "minecraft": "~1.21",
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "sodium": "*"
   }
 }
